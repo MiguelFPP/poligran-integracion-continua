@@ -1,0 +1,48 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
+import { OriginGuard } from './common/guards/origin.guard.js';
+import { RateLimitGuard } from './common/guards/rate-limit.guard.js';
+import { RolesGuard } from './common/guards/roles.guard.js';
+import { RateLimitModule } from './common/rate-limit/rate-limit.module.js';
+import { validateEnv } from './config/env.validation.js';
+import { HealthModule } from './health/health.module.js';
+import { AuthModule } from './modules/auth/auth.module.js';
+import { CategoriesModule } from './modules/categories/categories.module.js';
+import { DashboardModule } from './modules/dashboard/dashboard.module.js';
+import { InventoryModule } from './modules/inventory/inventory.module.js';
+import { ProductsModule } from './modules/products/products.module.js';
+import { SalesModule } from './modules/sales/sales.module.js';
+import { UsersModule } from './modules/users/users.module.js';
+import { PrismaModule } from './prisma/prisma.module.js';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      cache: true,
+      validate: validateEnv,
+    }),
+    PrismaModule,
+    RateLimitModule,
+    AuthModule,
+    UsersModule,
+    CategoriesModule,
+    ProductsModule,
+    InventoryModule,
+    SalesModule,
+    DashboardModule,
+    HealthModule,
+  ],
+  providers: [
+    { provide: APP_FILTER, useClass: HttpExceptionFilter },
+    // El orden importa: primero límite de peticiones, luego Origin, auth y roles.
+    { provide: APP_GUARD, useClass: RateLimitGuard },
+    { provide: APP_GUARD, useClass: OriginGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+  ],
+})
+export class AppModule {}
