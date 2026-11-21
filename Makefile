@@ -2,8 +2,15 @@ COMPOSE := docker compose
 TEST_DB_URL := postgresql://pos:pos@db:5432/pos_test
 FILE ?=
 
+# --- Integración continua (Entregable 2 — Escenario 5) ---
+CI_COMPOSE := docker compose -f ci/docker-compose.yml
+# Proyecto del stack de la app dentro del pipeline: distinto del servidor
+# (`pos-ci-server`) para que `ci-stack-down` no apague Jenkins.
+CI_PROJECT := pos-stack-ci
+CI_STACK := $(COMPOSE) -p $(CI_PROJECT) -f docker-compose.yml -f ci/docker-compose.ci.yml
+
 .DEFAULT_GOAL := help
-.PHONY: help up down logs ps build migrate migrate-test migrate-deploy seed seed-demo api-test api-e2e web-test lint-api lint-web typecheck-api typecheck-web lint typecheck api-test-cov api-e2e-cov web-test-cov test-all test-reset reset smoke db-shell psql
+.PHONY: help up down logs ps build migrate migrate-test migrate-deploy seed seed-demo api-test api-e2e web-test lint-api lint-web typecheck-api typecheck-web lint typecheck api-test-cov api-e2e-cov web-test-cov test-all test-reset reset smoke db-shell psql ci-up ci-down ci-logs ci-ps ci-build ci-reset ci-shell ci-stack-up ci-stack-down
 
 help: ## Muestra los comandos disponibles
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -89,3 +96,40 @@ reset: ## Reinicia la base pos (migrate reset + seed)
 
 smoke: ## Comprueba salud y sesión real de la API y la web
 	./scripts/smoke.sh
+
+# ============================================================================
+# Integración continua — Jenkins (Entregable 2 / Escenario 5)
+# ============================================================================
+
+ci-net: ## Crea la red compartida entre Jenkins y el stack del pipeline
+	@docker network inspect pos-ci-net >/dev/null 2>&1 \
+		|| docker network create pos-ci-net
+
+ci-up: ci-net ## Construye y levanta Jenkins en http://localhost:8080
+	$(CI_COMPOSE) up -d --build
+	@echo "Jenkins: http://localhost:8080  (usuario: admin / Admin123!)"
+
+ci-down: ## Detiene Jenkins (conserva su volumen)
+	$(CI_COMPOSE) down
+
+ci-logs: ## Sigue los logs de Jenkins
+	$(CI_COMPOSE) logs -f --tail=100 jenkins
+
+ci-ps: ## Estado del contenedor de Jenkins
+	$(CI_COMPOSE) ps
+
+ci-build: ## Reconstruye la imagen de Jenkins (plugins incluidos)
+	$(CI_COMPOSE) build --no-cache jenkins
+
+ci-shell: ## Shell dentro del contenedor de Jenkins
+	$(CI_COMPOSE) exec jenkins bash
+
+ci-reset: ## DESTRUYE Jenkins (volumen incluido) y lo levanta de cero
+	$(CI_COMPOSE) down -v
+	$(CI_COMPOSE) up -d --build
+
+ci-stack-up: ci-net ## Levanta el stack POS con la configuración de CI
+	$(CI_STACK) up -d --wait db api web
+
+ci-stack-down: ## Detiene el stack y borra el volumen del pipeline
+	$(CI_STACK) down --remove-orphans --volumes

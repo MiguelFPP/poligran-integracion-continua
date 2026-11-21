@@ -19,6 +19,7 @@ Versión **v1.0.0** cerrada en `main` y lista para entrega. Alcance cubierto:
 - Web Next.js con las pantallas de login, dashboard, productos, categorías, inventario, POS y ventas.
 - 488 pruebas en verde (220 unitarias de API, 95 e2e de API y 173 de la web) con umbrales de cobertura activos.
 - CI en GitHub Actions: lint, typecheck, unitarios, e2e y build.
+- **Jenkins** como servidor de integración continua (Entregable 2): configuración como código, pipeline declarativo, reportes JUnit y cobertura HTML.
 - Semilla base y semilla de demostración reproducibles (`faker.seed(2026)`).
 
 ## Índice
@@ -35,6 +36,7 @@ Versión **v1.0.0** cerrada en `main` y lista para entrega. Alcance cubierto:
 - [Comandos del Makefile](#comandos-del-makefile)
 - [Seeds y datos de demostración](#seeds-y-datos-de-demostración)
 - [Testing y cobertura](#testing-y-cobertura)
+- [Integración continua (Jenkins)](#integración-continua-jenkins)
 - [Seguridad](#seguridad)
 - [Reglas de negocio](#reglas-de-negocio)
 - [Documentación](#documentación)
@@ -193,6 +195,12 @@ Las imágenes vivas del sistema con el seed de demostración están en [`docs/CA
 | :--------- | :------------------ | :-------- | :--------- |
 | ![Inventario](docs/CAPTURAS/03-inventario.png) | ![Ventas](docs/CAPTURAS/04-ventas.png) | ![Productos](docs/CAPTURAS/05-productos.png) | ![Categorías](docs/CAPTURAS/06-categorias.png) |
 
+Integración continua con Jenkins:
+
+| Job con historial y stage view | Panel de control | Tests del build | Cobertura de la API |
+| :----------------------------- | :--------------- | :-------------- | :------------------ |
+| ![Job](docs/CAPTURAS/07-jenkins-job.png) | ![Panel](docs/CAPTURAS/08-jenkins-dashboard.png) | ![Tests](docs/CAPTURAS/09-jenkins-tests.png) | ![Cobertura](docs/CAPTURAS/10-jenkins-cobertura.png) |
+
 ## Comandos del Makefile
 
 `make` o `make help` listan todos los targets.
@@ -222,6 +230,11 @@ Las imágenes vivas del sistema con el seed de demostración están en [`docs/CA
 | `make reset`                   | Reinicia la base `pos`: `prisma migrate reset --force` + seed base             |
 | `make test-reset`              | **Destruye el volumen** (`down -v`), reconstruye y levanta de cero             |
 | `make smoke`                   | Humo end-to-end con `scripts/smoke.sh`                                        |
+| `make ci-up` / `make ci-down`  | Levanta o detiene Jenkins (`db`, `api` y `web` siguen siendo independientes)  |
+| `make ci-logs` / `make ci-ps`  | Logs y estado del contenedor de Jenkins                                       |
+| `make ci-build` / `make ci-reset` | Reconstruye la imagen de Jenkins / la reinicia de cero (borra su volumen)  |
+| `make ci-shell`                | Shell dentro del contenedor de Jenkins                                        |
+| `make ci-stack-up` / `ci-stack-down` | Ciclo de vida del stack POS con la configuración del pipeline           |
 
 Los targets de test aceptan `FILE=` para acotar la corrida, con varios patrones separados por espacio:
 
@@ -232,6 +245,34 @@ make web-test FILE=src/components/layout/app-shell.test.tsx
 ```
 
 Sin `FILE`, cada target ejecuta **toda** la suite de su proyecto. `make api-e2e` y `make api-e2e-cov` aplican antes `prisma migrate deploy` sobre `pos_test` (`make migrate-test`).
+
+## Integración continua (Jenkins)
+
+El proyecto integra **Jenkins** como gestor de la integración continua, conectando
+los tres componentes del entregable: **GitHub** (origen del código), **Docker**
+(entorno de ejecución) y **Jenkins** (orquestación y reportes).
+
+```bash
+make ci-up      # construye y arranca Jenkins en http://localhost:8080
+make ci-logs    # sigue los logs
+make ci-down    # lo detiene
+```
+
+| Aspecto | Detalle |
+| :------ | :------ |
+| Consola | http://localhost:8080 — usuario `admin` / `Admin123!` (solo desarrollo) |
+| Job | `POS — Integración continua`, creado por configuración como código |
+| Disparador | `checkout scm` + polling `H/5 * * * *` (o webhook `/github-webhook/`) |
+| Entorno de ejecución | Las **mismas imágenes** de la Entrega 1, vía `docker compose run` |
+| Etapas | Checkout → imágenes → lint/typecheck → unitarias API y web → e2e con PostgreSQL → build de producción → despliegue y humo |
+| Reportes | JUnit por suite (976 tests) y cobertura HTML de la API y de la web |
+
+El pipeline vive en `Jenkinsfile`; el servidor y sus plugins se declaran en
+`ci/` y se cargan sin clics. El detalle completo está en
+[docs/CI-JENKINS.md](docs/CI-JENKINS.md).
+
+> **Note:** el pipeline usa un proyecto Compose propio (`pos-stack-ci`) y no
+> publica puertos al host, así puede convivir con `make up` sin conflictos.
 
 ## Seeds y datos de demostración
 
@@ -318,6 +359,7 @@ Las fórmulas del dashboard, del costo promedio y del prorrateo están en [docs/
 
 | Documento                                        | Contenido                                                                 |
 | :----------------------------------------------- | :------------------------------------------------------------------------ |
+| [docs/CI-JENKINS.md](docs/CI-JENKINS.md)          | Jenkins: servidor, configuración como código, plugins, pipeline y reportes (Entregable 2) |
 | [docs/DOCKER.md](docs/DOCKER.md)                  | Configuración de los contenedores, red `pos-net`, healthchecks y evidencia de comunicación entre servicios |
 | [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md)      | Monorepo, capas de la API, orden de guards, arquitectura de la web, flujo de datos y Docker |
 | [docs/MODELO-DATOS.md](docs/MODELO-DATOS.md)      | Entidades, enums, relaciones, índices, restricciones SQL y fórmulas        |

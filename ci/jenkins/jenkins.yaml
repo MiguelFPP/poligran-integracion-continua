@@ -1,0 +1,95 @@
+jenkins:
+  systemMessage: |
+    POS · Integración continua (Entregable 2 — Escenario 5)
+    Pipeline: Jenkinsfile en la raíz del repositorio.
+  numExecutors: 2
+  mode: NORMAL
+  scmCheckoutRetryCount: 2
+  labelString: built-in master docker
+
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_ID}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+  # El controlador no compila: cada etapa se ejecuta en las imágenes del POS.
+  nodes: []
+
+  globalNodeProperties:
+    - envVars:
+        env:
+          - key: DOCKER_CLI_HINTS
+            value: "false"
+          - key: BUILDKIT_PROGRESS
+            value: plain
+
+unclassified:
+  location:
+    url: "${JENKINS_URL}"
+    adminAddress: "CI POS <ci@pos.local>"
+
+  mailer:
+    replyToAddress: ci@pos.local
+
+  gitHubPluginConfig:
+    hookUrl: "${JENKINS_URL}/github-webhook/"
+    configs:
+      - name: "GitHub"
+        apiUrl: "https://api.github.com"
+        credentialsId: "${GITHUB_CREDENTIALS_ID}"
+
+tool:
+  git:
+    installations:
+      - name: Default
+        home: git
+
+security:
+  globalJobDslSecurityConfiguration:
+    useScriptSecurity: false
+
+jobs:
+  - script: |
+      pipelineJob('pos-ci') {
+        displayName('POS — Integración continua')
+        description('''\
+          Pipeline declarativo del sistema POS (NestJS + Next.js + PostgreSQL).
+          Ejecuta lint, typecheck, pruebas unitarias, e2e y build de Docker
+          usando las mismas imágenes de la Entrega 1.
+        '''.stripIndent())
+
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('${GITHUB_REPO_URL}')
+                  credentials('${GITHUB_CREDENTIALS_ID}')
+                }
+                branch('${GITHUB_BRANCH_SPEC}')
+              }
+            }
+            scriptPath('Jenkinsfile')
+            lightweight(true)
+          }
+        }
+
+        triggers {
+          scm('${POLL_SCHEDULE}')
+        }
+
+        properties {
+          disableConcurrentBuilds()
+        }
+
+        logRotator {
+          numToKeep(20)
+          artifactNumToKeep(5)
+        }
+      }

@@ -1,0 +1,39 @@
+# Plugins de Jenkins para el entregable 2 (Escenario 5).
+# Se instalan en la construcción de la imagen con `jenkins-plugin-cli`.
+# Las versiones las resuelve el CLI contra el update center: solo se fijan
+# los nombres para no atar el repositorio a una release concreta de Jenkins.
+
+# --- Configuración como código: usuarios, seguridad, job y plugins ---
+configuration-as-code
+job-dsl
+
+# --- Pipeline declarativo y utilidades de ejecución ---
+workflow-aggregator
+workflow-job
+workflow-cps
+workflow-basic-steps
+pipeline-stage-view
+pipeline-graph-view
+ws-cleanup
+timestamper
+ansicolor
+build-timeout
+
+# --- Integración con GitHub ---
+git
+github
+github-branch-source
+plain-credentials
+credentials-binding
+
+# --- Reportes de ejecución y errores ---
+junit
+cobertura
+htmlpublisher
+
+# --- Integración con Docker (pasos `docker` en pipeline) ---
+# Nota: el CLI de buildx no es un plugin de Jenkins; se instala como binario
+# en la imagen (`docker-buildx-plugin`) para que Compose use BuildKit.
+docker-workflow
+docker-commons
+docker-build-step
