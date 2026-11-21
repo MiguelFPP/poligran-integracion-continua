@@ -1,0 +1,83 @@
+# Jenkins — Entregable 2 (Escenario 5)
+#
+# Servidor de integración continua del POS. Se levanta con `make ci-up`,
+# que antes crea la red externa `pos-ci-net`.
+#
+#   make ci-up      # construye y arranca Jenkins en http://localhost:8080
+#   make ci-logs    # sigue los logs
+#   make ci-down    # detiene Jenkins (conserva el volumen)
+#
+# Modelo Docker-outside-of-Docker: Jenkins usa el socket del daemon del host.
+# Consecuencias que el pipeline tiene en cuenta:
+#   * `docker compose build` funciona: BuildKit transmite el contexto desde
+#     el cliente, así que el daemon no necesita ver el workspace.
+#   * Los bind mounts `-v <ruta del workspace>` NO funcionan (el daemon no ve
+#     esas rutas). Por eso `ci/scripts/run-with-reports.sh` extrae los
+#     reportes con `docker cp` en lugar de montarlos.
+#
+# Proyecto Compose propio del servidor. Debe ser DISTINTO del que usa el
+# stack de la aplicación dentro del pipeline (`pos-stack-ci`): el `down` del
+# post de Jenkins destruye ese stack, y compartir nombre destruiría a Jenkins.
+name: pos-ci-server
+
+services:
+  jenkins:
+    build:
+      context: ./jenkins
+      args:
+        # GID del grupo `docker` del host: `stat -c '%g' /var/run/docker.sock`.
+        DOCKER_GID: ${DOCKER_GID:-985}
+    image: pos-jenkins:lts
+    container_name: pos-jenkins
+    restart: unless-stopped
+    environment:
+      # Configuración como código: usuario, seguridad, job y plugins.
+      CASC_JENKINS_CONFIG: /var/jenkins_home/casc/jenkins.yaml
+      JAVA_OPTS: >-
+        -Djenkins.install.runSetupWizard=false
+        -Duser.timezone=America/Bogota
+        -Dhudson.model.DownloadService.noSignatureCheck=true
+      JENKINS_URL: ${JENKINS_URL:-http://localhost:8080/}
+      JENKINS_ADMIN_ID: ${JENKINS_ADMIN_ID:-admin}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:-Admin123!}
+      GITHUB_REPO_URL: ${GITHUB_REPO_URL:-https://github.com/MiguelFPP/poli-entrega-1-escenario-3-integracion-continua.git}
+      GITHUB_BRANCH_SPEC: ${GITHUB_BRANCH_SPEC:-*/main}
+      POLL_SCHEDULE: ${POLL_SCHEDULE:-H/5 * * * *}
+    ports:
+      - '8080:8080'
+      - '50000:50000'
+    volumes:
+      - ci-jenkins-home:/var/jenkins_home
+      - ./jenkins/jenkins.yaml:/var/jenkins_home/casc/jenkins.yaml:ro
+      # Socket del daemon del host: Jenkins crea y destruye los contenedores
+      # del pipeline con las imágenes del proyecto, igual que `make` en local.
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      # Refuerzo del GID: el socket pertenece al grupo `docker` del host.
+      - "${DOCKER_GID:-985}"
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'curl',
+          '--fail',
+          '--silent',
+          '--show-error',
+          'http://127.0.0.1:8080/login',
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 24
+      start_period: 90s
+    networks:
+      - pos-ci-net
+
+networks:
+  pos-ci-net:
+    name: pos-ci-net
+    external: true
+    driver: bridge
+
+volumes:
+  ci-jenkins-home:
+    name: pos-ci-jenkins-home

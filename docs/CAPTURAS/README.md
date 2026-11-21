@@ -80,17 +80,60 @@ Ruta `/categorias`:
 - Botón **Nueva categoría**.
 - Tabla `Nombre`, `Descripción`, `Productos` (conteo) y `Estado`, con las acciones **Editar** y **Desactivar** por fila.
 
+### `07-jenkins-job.png` — Job de integración continua
+
+![Job de Jenkins con historial y stage view](07-jenkins-job.png)
+
+Job `pos-ci` en `http://localhost:8080/job/pos-ci/`:
+
+- Historial de builds (#1 fallido, #2 y #3 en verde) y **Tendencia de los resultados de pruebas**.
+- **Stage View** con las doce etapas, su duración media y su estado por build.
+- Enlaces a los artefactos del último build correcto (`api-unit/junit.xml`, `web/junit.xml`, `api-e2e/junit-e2e.xml`, `lcov.info` de API y web).
+- Entradas laterales **Cobertura API (unitarias)** y **Cobertura Web**.
+
+### `08-jenkins-dashboard.png` — Panel de control
+
+![Panel de control de Jenkins](08-jenkins-dashboard.png)
+
+`http://localhost:8080/` tras iniciar sesión:
+
+- Lista de tareas con el resultado del último build y la fecha.
+- Cola de ejecución y ejecutores del controlador.
+- Acceso al historial de tareas ejecutadas, que es el registro de la automatización.
+
+### `09-jenkins-tests.png` — Resultados de los tests
+
+![Resumen de los 976 tests del build](09-jenkins-tests.png)
+
+Pestaña **Resultado de los tests** del build #3:
+
+- 976 pruebas, 0 fallos y 0 omitidas: unitarias de la API, unitarias de la web y e2e.
+- Desglose por paquete (`AuthController`, `TokenService`, `src/lib/api-client.test`, …) con la duración de cada uno.
+
+### `10-jenkins-cobertura.png` — Cobertura de la API
+
+![Cobertura HTML de las pruebas unitarias de la API](10-jenkins-cobertura.png)
+
+Reporte `lcov` publicado desde el build:
+
+- 86.18 % de sentencias, 69.03 % de ramas, 75.39 % de funciones y 87.04 % de líneas.
+- Desglose por carpeta de `apps/api/src` (`common/guards` al 100 %, `modules/sales` al 91.18 %, …).
+
 ## Resumen
 
-| Archivo            | Ruta          | Foco de la captura                                        |
-| :----------------- | :------------ | :-------------------------------------------------------- |
-| `00-login.png`     | `/login`      | Formulario de acceso y nota de credenciales                |
-| `01-dashboard.png` | `/dashboard`  | KPIs, tendencia, ranking, métodos de pago y alertas        |
-| `02-pos.png`       | `/pos`        | Buscador de productos, carrito y cobro                     |
-| `03-inventario.png`| `/inventario` | Valorización, stock bajo y movimientos                     |
-| `04-ventas.png`    | `/ventas`     | Historial de ventas con estado y forma de pago             |
-| `05-productos.png` | `/productos`  | Catálogo con filtros y acciones                            |
-| `06-categorias.png`| `/categorias` | Listado de categorías con conteo de productos              |
+| Archivo                       | Ruta                  | Foco de la captura                                        |
+| :---------------------------- | :-------------------- | :-------------------------------------------------------- |
+| `00-login.png`                | `/login`              | Formulario de acceso y nota de credenciales                |
+| `01-dashboard.png`            | `/dashboard`          | KPIs, tendencia, ranking, métodos de pago y alertas        |
+| `02-pos.png`                  | `/pos`                | Buscador de productos, carrito y cobro                     |
+| `03-inventario.png`           | `/inventario`         | Valorización, stock bajo y movimientos                     |
+| `04-ventas.png`               | `/ventas`             | Historial de ventas con estado y forma de pago             |
+| `05-productos.png`            | `/productos`          | Catálogo con filtros y acciones                            |
+| `06-categorias.png`           | `/categorias`         | Listado de categorías con conteo de productos              |
+| `07-jenkins-job.png`          | `/job/pos-ci/`        | Historial, stage view y artefactos del pipeline            |
+| `08-jenkins-dashboard.png`    | `/`                   | Panel de control con las tareas y sus ejecuciones          |
+| `09-jenkins-tests.png`        | `…/3/testReport/`     | Los 976 tests del build con 0 fallos                       |
+| `10-jenkins-cobertura.png`    | `…/Cobertura_20API…/` | Cobertura HTML de las unitarias de la API                  |
 
 > **Note:** los datos que aparecen en las capturas provienen del seed de demostración (`make seed-demo`): 6 categorías, 30 productos con SKU `DEMO-###` y 40 ventas de los últimos 30 días, de las cuales 6 quedan anuladas. Los importes son en COP con el IVA 19 % incluido.
 

@@ -7,9 +7,14 @@ dist
 build
 out
 coverage
+reports
 *.log
 .env
 .env.*
 !.env.example
 apps/api/src/generated
 README.md
+.agents
+.codebase-memory
+.playwright-mcp
+docs

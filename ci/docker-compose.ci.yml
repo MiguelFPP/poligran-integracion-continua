@@ -1,0 +1,45 @@
+# Override del stack POS para las ejecuciones de Jenkins.
+#
+# El pipeline reutiliza `docker-compose.yml` (las MISMAS imágenes de la
+# Entrega 1) con `--project-name pos-ci` y este override, de modo que no
+# choca con el entorno de desarrollo que el operador tenga levantado:
+#
+#   * sin `container_name` fijo      -> contenedores `pos-ci-db-1`, etc.
+#   * sin puertos publicados         -> no ocupa 3000/3001/5432 del host
+#   * volumen propio                 -> `pos-ci-pgdata` (se borra al final)
+#   * red externa única `pos-ci-net` -> Jenkins se une a ella y resuelve
+#     `api` y `web` por nombre de servicio, igual que la web resuelve `api`
+#
+# El montaje de `infra/postgres/init.sql` se sustituye a propósito: la base
+# `pos_test` la recrea el pipeline en cada ejecución, así no depende de que
+# el volumen se haya inicializado con ese script.
+#
+# Uso:
+#   docker compose -p pos-stack-ci -f docker-compose.yml -f ci/docker-compose.ci.yml ...
+#
+# El nombre de proyecto `pos-stack-ci` es distinto del servidor Jenkins
+# (`pos-ci-server`) para que el `down` del pipeline no apague Jenkins.
+
+services:
+  db:
+    container_name: !reset null
+    ports: !reset []
+    volumes: !override
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    container_name: !reset null
+    ports: !reset []
+
+  web:
+    container_name: !reset null
+    ports: !reset []
+
+volumes:
+  pgdata:
+    name: pos-ci-pgdata
+
+networks:
+  pos-net:
+    name: pos-ci-net
+    external: true
