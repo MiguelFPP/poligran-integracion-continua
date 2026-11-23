@@ -25,7 +25,7 @@
 
 ```mermaid
 flowchart LR
-  dev["Desarrollador"] -->|git push| gh["GitHub<br/>MiguelFPP/poli-entrega-1-…"]
+  dev["Desarrollador"] -->|git push| gh["GitHub<br/>MiguelFPP/poligran-integracion-continua"]
   gh -->|"polling SCM H/5 * * * *<br/>o webhook"| jk["pos-jenkins<br/>Jenkins LTS · :8080"]
   jk -->|"docker compose build / run<br/>(socket del host)"| dock["Daemon Docker"]
   dock --> api["pos-stack-ci-api-1"]
@@ -107,7 +107,7 @@ contra el update center, por lo que no se fija ninguna release.
 | Pipeline | `workflow-aggregator`, `workflow-job`, `workflow-cps`, `workflow-basic-steps`, `pipeline-stage-view`, `pipeline-graph-view`, `ws-cleanup`, `timestamper`, `ansicolor`, `build-timeout` |
 | GitHub | `git`, `github`, `github-branch-source`, `plain-credentials`, `credentials-binding` |
 | Reportes | `junit`, `cobertura`, `htmlpublisher` |
-| Docker | `docker-workflow`, `docker-commons`, `docker-build-step`, `buildx` |
+| Docker | `docker-workflow`, `docker-commons`, `docker-build-step` (el CLI de buildx se instala como binario en la imagen, no es un plugin) |
 
 ## El pipeline
 
@@ -148,7 +148,7 @@ bloque `environment`; en local las suites no escriben archivos adicionales.
 
 | Mecanismo | Configuración |
 | :-------- | :------------ |
-| Repositorio | `GITHUB_REPO_URL` (por defecto el remoto de la Entrega 1). |
+| Repositorio | `GITHUB_REPO_URL` (por defecto `https://github.com/MiguelFPP/poligran-integracion-continua.git`). |
 | Rama | `GITHUB_BRANCH_SPEC` (por defecto `*/main`). |
 | Detección de cambios | `polling` con `POLL_SCHEDULE` (por defecto `H/5 * * * *`). |
 | Webhook (opcional) | `http://<host>:8080/github-webhook/` en *Settings → Webhooks*. |
@@ -156,7 +156,7 @@ bloque `environment`; en local las suites no escriben archivos adicionales.
 Para trabajar en la rama del entregable:
 
 ```bash
-GITHUB_BRANCH_SPEC='*/feature/entregable-2-jenkins' make ci-up
+GITHUB_BRANCH_SPEC='*/feat/entregable-2' make ci-up
 ```
 
 Si el repositorio es privado, añade una credencial de tipo *Secret text* o
